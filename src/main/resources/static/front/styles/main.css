@@ -661,6 +661,55 @@
   line-height: 24rem;
 }
 
+#main .reviewBox {
+  margin-top: 16rem;
+  text-align: left;
+  border-top: 1rem solid #efefef;
+  padding-top: 12rem;
+}
+
+#main .reviewTitle {
+  font-size: 15rem;
+  font-weight: 600;
+  color: #333333;
+  margin-bottom: 8rem;
+}
+
+#main .reviewItem {
+  padding: 8rem 0;
+  border-bottom: 1rem solid #f1f1f1;
+}
+
+#main .reviewMeta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12rem;
+  color: #999999;
+  margin-bottom: 5rem;
+}
+
+#main .reviewContent {
+  font-size: 13rem;
+  color: #333333;
+  line-height: 20rem;
+}
+
+#main .reviewReply {
+  font-size: 12rem;
+  color: #666666;
+  line-height: 18rem;
+  background: #f8f8f8;
+  padding: 6rem;
+  margin-top: 6rem;
+  border-radius: 4rem;
+}
+
+#main .reviewEmpty {
+  font-size: 13rem;
+  color: #999999;
+  padding: 8rem 0;
+}
+
 #main .detailsDialog .divNum {
   display: flex;
   justify-content: space-between;

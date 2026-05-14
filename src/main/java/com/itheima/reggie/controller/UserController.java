@@ -44,6 +44,7 @@ import com.itheima.reggie.service.UserService;
 import com.itheima.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -87,11 +88,33 @@ public class UserController {
                 user.setStatus(1);
                 userService.save(user);
             }
+            session.removeAttribute("employee");
+            session.removeAttribute(phone);
             session.setAttribute("user", user.getId());
             return R.success(user);
         }
         return R.error("验证码错误，请重新输入");
 
+    }
+
+    @PostMapping("/loginout")
+    public R<String> loginout(HttpSession session){
+        session.removeAttribute("user");
+        return R.success("退出成功");
+    }
+
+    @GetMapping("/status")
+    public R<User> status(HttpSession session){
+        Object userId = session.getAttribute("user");
+        if (!(userId instanceof Long)) {
+            return R.error("NOTLOGIN");
+        }
+        User user = userService.getById((Long) userId);
+        if (user == null) {
+            session.removeAttribute("user");
+            return R.error("NOTLOGIN");
+        }
+        return R.success(user);
     }
 }
  

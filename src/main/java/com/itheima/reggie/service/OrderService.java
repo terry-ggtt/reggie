@@ -10,6 +10,10 @@ public interface OrderService extends IService<Orders> {
      * @param orders
      */
     public void submit(Orders orders);
-//    agdin
-//    public void again(Orders orders);
+
+    /**
+     * 再来一单
+     * @param orders
+     */
+    public void again(Orders orders);
 }

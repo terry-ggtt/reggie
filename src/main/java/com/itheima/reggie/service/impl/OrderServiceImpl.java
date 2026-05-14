@@ -105,23 +105,55 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Orders> implement
         //清空购物车数据
         shoppingCartService.remove(wrapper);
     }
-//    @Override
-//    public void again(Orders orders) {
-//        Long orderId = orders.getId();
-//        List<OrderDetail> orderDetails = orderDetailService.list(new LambdaQueryWrapper<OrderDetail>().eq(OrderDetail::getOrderId, orderId));
-//        orders.setOrderDetailList(orderDetails);
-//        orderDetailService.saveOrUpdateBatch(orderDetails);
-//        this.updateById(orders);
-//        shoppingCartService.remove(new LambdaQueryWrapper<ShoppingCart>().eq(ShoppingCart::getUserId, BaseContext.getCurrentId()));
-//        shoppingCartService.saveBatch(orderDetails.stream().map(item -> {
-//            ShoppingCart shoppingCart = new ShoppingCart();
-//            shoppingCart.setUserId(BaseContext.getCurrentId());
-//            shoppingCart.setDishId(item.getDishId());
-//            shoppingCart.setSetmealId(item.getSetmealId());
-//            shoppingCart.setName(item.getName());
-//            shoppingCart.setImage(item.getImage());
-//            shoppingCart.setDishFlavor(item.getDishFlavor());
-//        }));
-//    }
+
+    /**
+     * 再来一单
+     * @param orders
+     */
+    @Override
+    @Transactional
+    public void again(Orders orders) {
+        Long orderId = orders.getId();
+        if (orderId == null) {
+            throw new CustomException("订单不存在");
+        }
+        Long userId = BaseContext.getCurrentId();
+        Orders oldOrder = this.getById(orderId);
+        if (oldOrder == null || !userId.equals(oldOrder.getUserId())) {
+            throw new CustomException("订单不存在");
+        }
+        // 查询原订单的明细
+        LambdaQueryWrapper<OrderDetail> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(OrderDetail::getOrderId, orderId);
+        List<OrderDetail> orderDetails = orderDetailService.list(wrapper);
+
+        if (orderDetails == null || orderDetails.size() == 0) {
+            throw new CustomException("订单无明细，无法再来一单");
+        }
+
+        // 清空当前用户购物车
+        LambdaQueryWrapper<ShoppingCart> cartWrapper = new LambdaQueryWrapper<>();
+        cartWrapper.eq(ShoppingCart::getUserId, userId);
+        shoppingCartService.remove(cartWrapper);
+
+        // 将订单明细转换为购物车数据
+        List<ShoppingCart> shoppingCarts = new java.util.ArrayList<>();
+        for (OrderDetail item : orderDetails) {
+            ShoppingCart shoppingCart = new ShoppingCart();
+            shoppingCart.setUserId(userId);
+            shoppingCart.setDishId(item.getDishId());
+            shoppingCart.setSetmealId(item.getSetmealId());
+            shoppingCart.setName(item.getName());
+            shoppingCart.setImage(item.getImage());
+            shoppingCart.setDishFlavor(item.getDishFlavor());
+            shoppingCart.setNumber(item.getNumber());
+            shoppingCart.setAmount(item.getAmount());
+            shoppingCart.setCreateTime(LocalDateTime.now());
+            shoppingCarts.add(shoppingCart);
+        }
+
+        // 保存到购物车
+        shoppingCartService.saveBatch(shoppingCarts);
+    }
 
 }

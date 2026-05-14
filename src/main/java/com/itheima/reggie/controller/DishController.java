@@ -7,15 +7,24 @@ import com.itheima.reggie.common.R;
 import com.itheima.reggie.entity.Category;
 import com.itheima.reggie.entity.Dish;
 import com.itheima.reggie.entity.DishFlavor;
+import com.itheima.reggie.entity.OrderDetail;
+import com.itheima.reggie.entity.Orders;
 import com.itheima.reggie.service.CategoryService;
 import com.itheima.reggie.service.DishFlavorService;
 import com.itheima.reggie.service.DishService;
+import com.itheima.reggie.service.OrderDetailService;
+import com.itheima.reggie.service.OrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,6 +37,10 @@ public class DishController {
     private DishService dishService;
     @Autowired
     private CategoryService categoryService;
+    @Autowired
+    private OrderService orderService;
+    @Autowired
+    private OrderDetailService orderDetailService;
     @PostMapping
     public R <String> save(@RequestBody DishDto dish){
         log.info("dish = {}",dish);
@@ -104,9 +117,11 @@ public class DishController {
         queryWrapper.eq(Dish::getStatus, 1);
         queryWrapper.orderByAsc(Dish::getSort).orderByDesc(Dish::getUpdateTime);
         List<Dish> list = dishService.list(queryWrapper);
+        Map<Long, Integer> monthlySales = getMonthlyDishSales();
         List<DishDto> dishDtoList = list.stream().map((item) -> {
             DishDto dishDto = new DishDto();
             BeanUtils.copyProperties(item, dishDto);
+            dishDto.setSaleNum(monthlySales.getOrDefault(item.getId(), 0));
             Long categoryId = item.getCategoryId();
             Category category = categoryService.getById(categoryId);
             if (category != null) {
@@ -127,5 +142,27 @@ public class DishController {
         dishService.removeWithFlavor(ids);
         return R.success("删除成功");
     }
+    private Map<Long, Integer> getMonthlyDishSales() {
+        LocalDateTime beginTime = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LambdaQueryWrapper<Orders> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.ge(Orders::getOrderTime, beginTime);
+        orderWrapper.le(Orders::getOrderTime, LocalDateTime.now());
+        orderWrapper.in(Orders::getStatus, 2, 3, 4);
+        List<Orders> orders = orderService.list(orderWrapper);
+        if (orders == null || orders.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
+        List<Long> orderIds = orders.stream().map(Orders::getId).collect(Collectors.toList());
+        LambdaQueryWrapper<OrderDetail> detailWrapper = new LambdaQueryWrapper<>();
+        detailWrapper.in(OrderDetail::getOrderId, orderIds);
+        detailWrapper.isNotNull(OrderDetail::getDishId);
+        List<OrderDetail> details = orderDetailService.list(detailWrapper);
+
+        Map<Long, Integer> result = new HashMap<>();
+        for (OrderDetail detail : details) {
+            result.merge(detail.getDishId(), detail.getNumber() == null ? 0 : detail.getNumber(), Integer::sum);
+        }
+        return result;
+    }
 }

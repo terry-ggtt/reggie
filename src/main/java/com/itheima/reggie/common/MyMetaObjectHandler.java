@@ -15,10 +15,19 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
     public void insertFill(MetaObject metaObject) {
         log.info("插入数据时，进行数据填充...");
         log.info(metaObject.toString());
-        metaObject.setValue("createTime" , LocalDateTime.now());
-        metaObject.setValue("updateTime" , LocalDateTime.now());
-        metaObject.setValue("createUser" , BaseContext.getCurrentId() );
-        metaObject.setValue("updateUser" , BaseContext.getCurrentId() );
+        LocalDateTime now = LocalDateTime.now();
+        if (metaObject.hasSetter("createTime")) {
+            metaObject.setValue("createTime" , now);
+        }
+        if (metaObject.hasSetter("updateTime")) {
+            metaObject.setValue("updateTime" , now);
+        }
+        if (metaObject.hasSetter("createUser")) {
+            metaObject.setValue("createUser" , BaseContext.getCurrentId() );
+        }
+        if (metaObject.hasSetter("updateUser")) {
+            metaObject.setValue("updateUser" , BaseContext.getCurrentId() );
+        }
     }
 
     @Override
@@ -26,10 +35,12 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
         log.info("更新数据时，进行数据填充...");
 
         log.info(metaObject.toString());
-        metaObject.setValue("updateTime" , LocalDateTime.now());
-        metaObject.setValue("updateUser" , BaseContext.getCurrentId());
-        metaObject.setValue("createTime" , LocalDateTime.now());
-        metaObject.setValue("createUser" , BaseContext.getCurrentId());
+        if (metaObject.hasSetter("updateTime")) {
+            metaObject.setValue("updateTime" , LocalDateTime.now());
+        }
+        if (metaObject.hasSetter("updateUser")) {
+            metaObject.setValue("updateUser" , BaseContext.getCurrentId());
+        }
 
 
     }

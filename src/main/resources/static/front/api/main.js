@@ -68,4 +68,11 @@ function setMealDishDetailsApi(id) {
     })
 }
 
+function itemReviewListApi(data) {
+    return $axios({
+        'url': '/orderReview/public',
+        'method': 'get',
+        params:{...data}
+    })
+}
 

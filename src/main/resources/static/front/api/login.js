@@ -21,4 +21,11 @@ function loginoutApi() {
   })
 }
 
+function statusApi() {
+  return $axios({
+    'url': '/user/status',
+    'method': 'get',
+  })
+}
+
   

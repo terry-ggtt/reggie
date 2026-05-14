@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>售后管理</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="after-sale-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-input v-model="orderId" placeholder="请输入订单ID" style="width: 240px"></el-input>
+        <el-select v-model="type" clearable placeholder="售后类型" style="width: 150px;margin-left: 16px;">
+          <el-option label="退款" :value="1"></el-option>
+          <el-option label="补偿" :value="2"></el-option>
+        </el-select>
+        <el-select v-model="status" clearable placeholder="处理状态" style="width: 150px;margin-left: 16px;">
+          <el-option label="待处理" :value="1"></el-option>
+          <el-option label="已通过" :value="2"></el-option>
+          <el-option label="已拒绝" :value="3"></el-option>
+          <el-option label="已完成" :value="4"></el-option>
+        </el-select>
+        <el-button type="primary" style="margin-left: 16px;" @click="handleQuery">查询</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox">
+        <el-table-column prop="orderId" label="订单ID" min-width="150"></el-table-column>
+        <el-table-column prop="userId" label="用户ID" min-width="150"></el-table-column>
+        <el-table-column label="类型" width="130">
+          <template slot-scope="{ row }">{{ row.type === 1 ? '退款' : '补偿' }}</template>
+        </el-table-column>
+        <el-table-column label="状态" width="120">
+          <template slot-scope="{ row }">{{ statusText(row.status) }}</template>
+        </el-table-column>
+        <el-table-column prop="reason" label="申请原因" min-width="180" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="applyAmount" label="申请金额" width="130"></el-table-column>
+        <el-table-column prop="handleAmount" label="处理金额" width="130"></el-table-column>
+        <el-table-column prop="applyTime" label="申请时间" min-width="160"></el-table-column>
+        <el-table-column label="操作" width="100">
+          <template slot-scope="{ row }">
+            <el-button type="text" @click="openHandle(row)">处理</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 30, 40]"
+        :page-size="pageSize"
+        :current-page.sync="page"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange">
+      </el-pagination>
+    </div>
+
+    <el-dialog title="处理售后申请" :visible.sync="dialogVisible" width="560px">
+      <el-form label-width="120px">
+        <el-form-item label="处理状态">
+          <el-select v-model="handleForm.status" style="width: 100%;">
+            <el-option label="已通过" :value="2"></el-option>
+            <el-option label="已拒绝" :value="3"></el-option>
+            <el-option label="已完成" :value="4"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="处理金额">
+          <el-input-number v-model="handleForm.handleAmount" :min="0" :precision="2" style="width: 100%;"></el-input-number>
+        </el-form-item>
+        <el-form-item label="处理备注">
+          <el-input type="textarea" :rows="5" v-model="handleForm.handleRemark" maxlength="1000" show-word-limit></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitHandle">保存</el-button>
+      </span>
+    </el-dialog>
+  </div>
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/afterSale.js"></script>
+  <script>
+    new Vue({
+      el: '#after-sale-app',
+      data() {
+        return {
+          orderId: '',
+          type: null,
+          status: 1,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+          tableData: [],
+          dialogVisible: false,
+          handleForm: {}
+        }
+      },
+      created() {
+        this.init()
+      },
+      methods: {
+        init() {
+          getAfterSalePage({
+            page: this.page,
+            pageSize: this.pageSize,
+            orderId: this.orderId || undefined,
+            type: this.type == null ? undefined : this.type,
+            status: this.status == null ? undefined : this.status
+          }).then(res => {
+            if (res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              this.$message.error(res.msg || '查询失败')
+            }
+          })
+        },
+        statusText(status) {
+          return { 1: '待处理', 2: '已通过', 3: '已拒绝', 4: '已完成' }[status] || ''
+        },
+        handleQuery() {
+          this.page = 1
+          this.init()
+        },
+        openHandle(row) {
+          this.handleForm = {
+            id: row.id,
+            status: row.status === 1 ? 2 : row.status,
+            handleAmount: row.handleAmount || row.applyAmount || 0,
+            handleRemark: row.handleRemark || ''
+          }
+          this.dialogVisible = true
+        },
+        submitHandle() {
+          handleAfterSale(this.handleForm).then(res => {
+            if (res.code === 1) {
+              this.$message.success('保存成功')
+              this.dialogVisible = false
+              this.init()
+            } else {
+              this.$message.error(res.msg || '保存失败')
+            }
+          })
+        },
+        handleSizeChange(val) {
+          this.pageSize = val
+          this.init()
+        },
+        handleCurrentChange(val) {
+          this.page = val
+          this.init()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

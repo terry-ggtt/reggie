@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>评论管理</title>
+  <link rel="stylesheet" href="../../plugins/element-ui/index.css" />
+  <link rel="stylesheet" href="../../styles/common.css" />
+  <link rel="stylesheet" href="../../styles/page.css" />
+</head>
+<body>
+  <div class="dashboard-container" id="review-app">
+    <div class="container">
+      <div class="tableBar">
+        <el-input v-model="orderId" placeholder="请输入订单ID" style="width: 240px"></el-input>
+        <el-select v-model="ratingMax" clearable placeholder="评分筛选" style="width: 160px;margin-left: 16px;">
+          <el-option label="全部" :value="null"></el-option>
+          <el-option label="差评 <= 2分" :value="2"></el-option>
+          <el-option label="评分 <= 3分" :value="3"></el-option>
+        </el-select>
+        <el-select v-model="status" clearable placeholder="显示状态" style="width: 140px;margin-left: 16px;">
+          <el-option label="显示" :value="1"></el-option>
+          <el-option label="隐藏" :value="0"></el-option>
+        </el-select>
+        <el-button type="primary" style="margin-left: 16px;" @click="handleQuery">查询</el-button>
+      </div>
+      <el-table :data="tableData" stripe class="tableBox">
+        <el-table-column prop="orderId" label="订单ID" min-width="150"></el-table-column>
+        <el-table-column prop="itemName" label="评价商品" min-width="160" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="userId" label="用户ID" min-width="150"></el-table-column>
+        <el-table-column prop="rating" label="评分" width="90"></el-table-column>
+        <el-table-column prop="content" label="评价内容" min-width="220" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="reply" label="商家回复" min-width="220" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="createTime" label="评价时间" min-width="160"></el-table-column>
+        <el-table-column label="状态" width="90">
+          <template slot-scope="{ row }">{{ row.status === 1 ? '显示' : '隐藏' }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="190">
+          <template slot-scope="{ row }">
+            <el-button type="text" @click="openReply(row)">回复</el-button>
+            <el-divider direction="vertical"></el-divider>
+            <el-button type="text" @click="changeStatus(row)">{{ row.status === 1 ? '隐藏' : '显示' }}</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-pagination
+        class="pageList"
+        :page-sizes="[10, 20, 30, 40]"
+        :page-size="pageSize"
+        :current-page.sync="page"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="counts"
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange">
+      </el-pagination>
+    </div>
+
+    <el-dialog title="回复评价" :visible.sync="dialogVisible" width="520px">
+      <el-input type="textarea" :rows="5" v-model="replyForm.reply" maxlength="1000" show-word-limit></el-input>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitReply">保存</el-button>
+      </span>
+    </el-dialog>
+  </div>
+  <script src="../../plugins/vue/vue.js"></script>
+  <script src="../../plugins/element-ui/index.js"></script>
+  <script src="../../plugins/axios/axios.min.js"></script>
+  <script src="../../js/request.js"></script>
+  <script src="../../api/review.js"></script>
+  <script>
+    new Vue({
+      el: '#review-app',
+      data() {
+        return {
+          orderId: '',
+          ratingMax: 2,
+          status: null,
+          page: 1,
+          pageSize: 10,
+          counts: 0,
+          tableData: [],
+          dialogVisible: false,
+          replyForm: {}
+        }
+      },
+      created() {
+        this.init()
+      },
+      methods: {
+        init() {
+          getReviewPage({
+            page: this.page,
+            pageSize: this.pageSize,
+            orderId: this.orderId || undefined,
+            ratingMax: this.ratingMax == null ? undefined : this.ratingMax,
+            status: this.status == null ? undefined : this.status
+          }).then(res => {
+            if (res.code === 1) {
+              this.tableData = res.data.records || []
+              this.counts = res.data.total
+            } else {
+              this.$message.error(res.msg || '查询失败')
+            }
+          })
+        },
+        handleQuery() {
+          this.page = 1
+          this.init()
+        },
+        openReply(row) {
+          this.replyForm = { id: row.id, reply: row.reply || '' }
+          this.dialogVisible = true
+        },
+        submitReply() {
+          replyReview(this.replyForm).then(res => {
+            if (res.code === 1) {
+              this.$message.success('保存成功')
+              this.dialogVisible = false
+              this.init()
+            } else {
+              this.$message.error(res.msg || '保存失败')
+            }
+          })
+        },
+        changeStatus(row) {
+          updateReviewStatus({ id: row.id, status: row.status === 1 ? 0 : 1 }).then(res => {
+            if (res.code === 1) {
+              this.init()
+            } else {
+              this.$message.error(res.msg || '更新失败')
+            }
+          })
+        },
+        handleSizeChange(val) {
+          this.pageSize = val
+          this.init()
+        },
+        handleCurrentChange(val) {
+          this.page = val
+          this.init()
+        }
+      }
+    })
+  </script>
+</body>
+</html>

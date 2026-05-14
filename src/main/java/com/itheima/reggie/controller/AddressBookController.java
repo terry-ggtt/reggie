@@ -37,13 +37,47 @@ public class AddressBookController {
     }
 
     /**
+     * 修改地址
+     */
+    @PutMapping
+    public R<AddressBook> update(@RequestBody AddressBook addressBook) {
+        Long currentId = BaseContext.getCurrentId();
+        AddressBook oldAddress = addressBookService.getById(addressBook.getId());
+        if (oldAddress == null || !currentId.equals(oldAddress.getUserId())) {
+            return R.error("地址不存在");
+        }
+        addressBook.setUserId(currentId);
+        addressBookService.updateById(addressBook);
+        return R.success(addressBook);
+    }
+
+    /**
+     * 删除地址
+     */
+    @DeleteMapping
+    public R<String> delete(@RequestParam Long ids) {
+        Long currentId = BaseContext.getCurrentId();
+        AddressBook addressBook = addressBookService.getById(ids);
+        if (addressBook == null || !currentId.equals(addressBook.getUserId())) {
+            return R.error("地址不存在");
+        }
+        addressBookService.removeById(ids);
+        return R.success("删除成功");
+    }
+
+    /**
      * 设置默认地址
      */
     @PutMapping("default")
     public R<AddressBook> setDefault(@RequestBody AddressBook addressBook) {
         log.info("addressBook:{}", addressBook);
+        Long currentId = BaseContext.getCurrentId();
+        AddressBook oldAddress = addressBookService.getById(addressBook.getId());
+        if (oldAddress == null || !currentId.equals(oldAddress.getUserId())) {
+            return R.error("地址不存在");
+        }
         LambdaUpdateWrapper<AddressBook> wrapper = new LambdaUpdateWrapper<>();
-        wrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
+        wrapper.eq(AddressBook::getUserId, currentId);
         wrapper.set(AddressBook::getIsDefault, 0);
         //SQL:update address_book set is_default = 0 where user_id = ?
         addressBookService.update(wrapper);
@@ -60,7 +94,7 @@ public class AddressBookController {
     @GetMapping("/{id}")
     public R get(@PathVariable Long id) {
         AddressBook addressBook = addressBookService.getById(id);
-        if (addressBook != null) {
+        if (addressBook != null && BaseContext.getCurrentId().equals(addressBook.getUserId())) {
             return R.success(addressBook);
         } else {
             return R.error("没有找到该对象");
@@ -101,5 +135,21 @@ public class AddressBookController {
 
         //SQL:select * from address_book where user_id = ? order by update_time desc
         return R.success(addressBookService.list(queryWrapper));
+    }
+
+    /**
+     * 查询最近更新地址
+     */
+    @GetMapping("/lastUpdate")
+    public R<AddressBook> lastUpdate() {
+        LambdaQueryWrapper<AddressBook> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(AddressBook::getUserId, BaseContext.getCurrentId());
+        queryWrapper.orderByDesc(AddressBook::getUpdateTime);
+        queryWrapper.last("limit 1");
+        AddressBook addressBook = addressBookService.getOne(queryWrapper);
+        if (addressBook == null) {
+            return R.error("没有找到该对象");
+        }
+        return R.success(addressBook);
     }
 }
