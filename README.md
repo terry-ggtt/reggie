@@ -1,107 +1,211 @@
 # 安理点餐管理系统
 
-这是一个用于餐饮外卖的点餐管理后台系统，系统包含用户端和管理端。
+这是一个基于 Spring Boot 的餐饮外卖/点餐管理系统，包含后台管理端和用户点餐端。前端页面以静态资源形式放在 Spring Boot 项目内，由后端服务统一托管。
 
 ## 技术栈
 
-- **后端**：Spring Boot + MyBatis Plus + MySQL
-- **前端**：Vue 2 + Element UI + ECharts
+后端：
+
+- Java 17
+- Spring Boot 2.4.5
+- Spring MVC
+- MyBatis-Plus 3.4.2
+- MySQL
+- Druid 数据库连接池
+- Lombok
+- Maven
+
+前端：
+
+- Vue 2
+- Element UI
+- Vant
+- Axios
+- ECharts
+- HTML / CSS / JavaScript
 
 ## 项目结构
 
+```text
+src/main/java/com/itheima/reggie/
+├── controller/      # 接口控制层
+├── service/         # 业务接口
+├── service/impl/    # 业务实现
+├── mapper/          # MyBatis-Plus 数据访问层
+├── entity/          # 数据实体
+├── DTO/             # 数据传输对象
+├── common/          # 通用返回、异常处理、自动填充、静态资源配置
+├── config/          # MyBatis-Plus 配置
+├── filter/          # 登录校验过滤器
+└── utils/           # 工具类
+
+src/main/resources/
+├── application.yml
+├── db/
+└── static/
+    ├── backend/     # 后台管理端页面
+    └── front/       # 用户点餐端页面
 ```
-├── src/main/java/com/itheima/reggie/
-│   ├── controller/     # 控制器
-│   ├── service/        # 业务逻辑
-│   ├── mapper/        # 数据访问
-│   ├── entity/        # 实体类
-│   ├── common/        # 公共类
-│   └── filter/       # 过滤器
-├── src/main/resources/
-│   ├── static/backend/  # 管理端前端
-│   └── static/front/    # 用户端前端
+
+## 功能模块
+
+后台管理端：
+
+- 员工登录与退出
+- 员工管理
+- 分类管理
+- 菜品管理
+- 套餐管理
+- 订单管理
+- 用户评价管理
+- 售后管理
+- 销售统计分析
+
+用户点餐端：
+
+- 手机号验证码登录
+- 菜品和套餐浏览
+- 购物车
+- 地址管理
+- 下单
+- 再来一单
+- 订单查看
+- 订单评价
+- 售后申请
+
+## 统计分析实现
+
+统计分析由后端接口聚合数据，前端使用 ECharts 渲染图表。
+
+后端入口：
+
+```text
+src/main/java/com/itheima/reggie/controller/ReportController.java
 ```
 
-## 快速开始
+统计接口：
 
-### 1. 环境要求
+| 接口 | 功能 |
+| --- | --- |
+| `GET /report/sales/date` | 按日统计订单数和营业额 |
+| `GET /report/sales/month` | 按月统计订单数和营业额 |
+| `GET /report/sales/year` | 按年统计订单数和营业额 |
+| `GET /report/dish/top10` | 统计热销菜品 TOP10 |
+| `GET /report/category/sales` | 统计分类销售额 |
 
-- JDK 1.8+
-- MySQL 8.0+
+实现方式：
+
+- 使用 `LambdaQueryWrapper` 按时间范围查询订单。
+- 只统计已完成订单，条件为 `Orders.status = 4`。
+- 订单数量使用 `orders.size()` 计算。
+- 营业额使用 Java Stream 对 `Orders.amount` 求和。
+- 热销菜品通过订单明细按 `dishId` 分组，并汇总 `number`。
+- 分类销售额通过 `dishId -> categoryId` 映射后，用 `Map.merge` 累加金额。
+- 当前实现主要在 Java 内存中聚合，没有使用 SQL `GROUP BY`。
+
+前端页面：
+
+```text
+src/main/resources/static/backend/page/report/sales.html
+```
+
+前端实现方式：
+
+- Vue 管理页面状态。
+- Axios 并发请求销售趋势、热销菜品、分类销售接口。
+- ECharts 渲染柱状图、折线图、横向柱状图和环形饼图。
+
+## 本地运行
+
+环境要求：
+
+- JDK 17
 - Maven 3.6+
+- MySQL 8.0+
 
-### 2. 配置数据库
-
-创建数据库 `reggie` 并导入数据：
+创建数据库：
 
 ```sql
 CREATE DATABASE reggie CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-配置 `application.yml` 中的数据库连接信息：
+也可以直接导入完整建库和演示数据脚本：
+
+```bash
+mysql -u root -p < src/main/resources/db/reggie_full.sql
+```
+
+修改数据库配置：
 
 ```yaml
 spring:
   datasource:
-    url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai
-    username: root
-    password: your_password
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/reggie?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: your_password
 ```
 
-### 3. 启动后端
+启动项目：
 
 ```bash
 mvn spring-boot:run
 ```
 
-或导入 IDEA 后运行 `ReggeApplication.java`
+或使用 Maven Wrapper：
 
-### 4. 访问系统
-
-- **管理端**：`http://localhost:8080/backend/`
-- **用户端**：`http://localhost:8080/front/index.html`
-
-默认管理员账号：`admin` / `123456`
-
-## 功能模块
-
-### 管理端
-
-- **员工管理**：员工账号管理
-- **分类管理**：菜品/套餐分类
-- **菜品管理**：菜品 CRUD
-- **套餐管理**：套餐管理
-- **订单管理**：订单查看
-- **统计分析**：销售数据统计
-
-### 核心 API
-
-| 接口 | 说明 |
-|------|------|
-| `GET /report/sales/date` | 按日统计 |
-| `GET /report/sales/month` | 按月统计 |
-| `GET /report/sales/year` | 按年统计 |
-| `GET /report/dish/top10` | 热销菜品 |
-| `GET /report/category/sales` | 分类销售占比 |
-
-## 统计分析功能
-
-支持按日/月/年三个维度查看：
-
-- **总订单量** / **总销售额**
-- **销售趋势图**（折线+柱状）
-- **热销菜品 TOP10**（横向柱状图）
-- **分类销售占比**（饼图）
-
-## 配置说明
-
-### 文件上传目录
-
-配置 `application.yml`：
-
-```yaml
-reggie:
-  path: D:/reggie_take_out/upload/
+```bash
+./mvnw spring-boot:run
 ```
 
-确保目录存在且有读写权限。
+Windows：
+
+```bash
+mvnw.cmd spring-boot:run
+```
+
+访问地址：
+
+```text
+后台管理端：http://localhost:8080/backend/index.html
+用户点餐端：http://localhost:8080/front/index.html
+```
+
+## 静态资源映射
+
+静态页面由 Spring Boot 提供访问：
+
+```text
+/backend/** -> classpath:/static/backend/
+/front/**   -> classpath:/static/front/
+```
+
+配置位置：
+
+```text
+src/main/java/com/itheima/reggie/common/WebMvcConfig.java
+```
+
+## 部署说明
+
+该项目不是纯前端项目，不能直接作为普通静态站点部署到 Vercel。
+
+原因：
+
+- 项目依赖 Spring Boot 后端服务。
+- 页面中的接口请求需要 Java 后端处理。
+- 数据需要连接 MySQL。
+- `/backend/**` 和 `/front/**` 路径映射只有在 Spring Boot 运行时才生效。
+
+推荐部署方式：
+
+- 后端部署到支持 Java 服务的平台，例如云服务器、Docker、Render、Railway、Fly.io 等。
+- 数据库使用云 MySQL 或独立 MySQL 服务。
+- 前端静态页面可以继续由 Spring Boot 托管。
+
+安全要求：
+
+- 不要把真实数据库账号、密码、短信密钥提交到仓库。
+- 生产环境应使用环境变量或外部配置注入敏感信息。
+- 如果仓库曾公开部署过包含 `application.yml` 的源码，应立即更换数据库密码和相关密钥。
